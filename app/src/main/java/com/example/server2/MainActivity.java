@@ -40,14 +40,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button captureButton = findViewById(R.id.captureButton);
-        captureButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Capture button 클릭 시 동작
-                dispatchTakePictureIntent();
-            }
-        });
 
 
         Button uploadButton = findViewById(R.id.uploadButton);
@@ -63,47 +55,7 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-    private void dispatchTakePictureIntent() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            File photoFile = null;
-            try {
-                photoFile = createImageFile();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-            if (photoFile != null) {
-                Uri photoURI = FileProvider.getUriForFile(this,
-                        "com.example.android.server2",
-                        photoFile);
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-            }
-        }
-    }
 
-
-    private File createImageFile() throws IOException {
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = getExternalFilesDir(null);
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
-        );
-        currentPhotoPath = image.getAbsolutePath();
-        return image;
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            // 사진이 촬영되었으므로 서버로 전송하는 작업 수행
-            uploadImageToServer(currentPhotoPath);
-        }
-    }
 
 
 
@@ -115,58 +67,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private String getPathFromUri(Uri uri) {
-        String[] projection = {MediaStore.Images.Media.DATA};
-        Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
-        int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-        cursor.moveToFirst();
-        String filePath = cursor.getString(columnIndex);
-        cursor.close();
-        return filePath;
-    }
-    private void uploadImageToServer(String imagePath) {
-        File imageFile = new File(imagePath);
-        RequestBody requestBody = RequestBody.create(MediaType.parse("image/*"), imageFile);
 
-        MultipartBody.Part imagePart = MultipartBody.Part.createFormData("image", imageFile.getName(), requestBody);
 
-        ApiService apiService = RetrofitInstance.getInstance().create(ApiService.class);
-
-        Call<ResponseBody> call = apiService.uploadImage(imagePart);
-
-        call.enqueue(new Callback<ResponseBody>() {
-            @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                if (response.isSuccessful()) {
-                    // 사진 업로드 성공
-                    try {
-                        String responseBody = response.body().string();
-                        JSONObject jsonObject = new JSONObject(responseBody);
-
-                        boolean uploadSuccess = jsonObject.getBoolean("success");
-                        String message = jsonObject.getString("message");
-
-                        if (uploadSuccess) {
-                            Log.d("Upload", "Image uploaded successfully. Message: " + message);
-                        } else {
-                            Log.e("Upload", "Image upload failed. Message: " + message);
-                        }
-                    } catch (IOException | JSONException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    // 사진 업로드 실패
-                    Log.e("Upload", "Image upload failed");
-                }
-            }
-
-            @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
-                // 네트워크 에러 처리
-                Log.e("Upload", "Network error: " + t.getMessage());
-            }
-        });
-    }
 
 
 

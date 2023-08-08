@@ -15,12 +15,7 @@
         android:layout_gravity="center"
         android:src="@mipmap/ic_launcher" />
 
-    <Button
-        android:id="@+id/captureButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Capture Photo"
-        android:layout_gravity="center" />
+
 
     <Button
         android:id="@+id/uploadButton"
